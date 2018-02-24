@@ -1,6 +1,5 @@
 # Changelog
 <!--
-## Next
 #### Enhancement
 #### Bug fix
 #### Internal
@@ -10,8 +9,18 @@
 #### Enhancement
 * example
 -->
+## Next
 
-## 0.0.4 (2018-02-24)
-## 0.0.3 (2018-02-24)
-## 0.0.2 (2018-02-24)
-## 0.0.1 (2018-02-24)
+## 0.0.1 -> 0.5.0 (2018-02-24)
+#### Enhancement
+* ask to overwrite file
+
+#### Bugfix
+* fix typos
+
+#### Internal
+* initial commit
+* create update script
+* create init script
+* create new project script
+* refactors
