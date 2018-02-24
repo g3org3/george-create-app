@@ -26,7 +26,9 @@
   "license": "MIT",
   "dependencies": {
     "cross-spawn": "^6.0.4",
-    "left-pad": "^1.2.0"
+    "enquirer": "^1.0.3",
+    "left-pad": "^1.2.0",
+    "prompt-expand": "^1.0.0"
   },
   "jest": {
     "modulePathIgnorePatterns": [

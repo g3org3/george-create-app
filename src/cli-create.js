@@ -1,10 +1,13 @@
 #!/usr/bin/env node
+const path = require('path')
+const fs = require('fs')
 const spawnSync = require('child_process').spawnSync
+const Enquirer = require('enquirer')
 const version = require('../package.json').version
 const checkIfUpdateAvailable = require('./checkIfUpdateAvailable')
 const { getFullDate, replaceAll } = require('./utils')
-const path = require('path')
-const fs = require('fs')
+
+const enquirer = new Enquirer()
 
 const addScripts = (pkgJSON, cwd = '.', parsed = false) => {
   const scripts = {
@@ -37,67 +40,157 @@ const replaceTokensInString = (tokens, file) =>
     file
   )
 
-const addTemplateFile = (name, options = {}) => {
-  const outputName = options.outputName || (options.hidden ? `.${name}` : name)
-  const cwd = options.cwd || '.'
-  const tokens = options.tokens || []
-  const fileLocalPath = `${cwd}/${outputName}`
-  try {
-    fs.readFileSync(fileLocalPath)
-    console.log(`> delete your ${outputName} if you want ours`)
-  } catch (err) {
-    const fileNotFound = err.message.substr(0, 'ENOENT'.length) === 'ENOENT'
-    if (fileNotFound) {
-      const filePath = path.resolve(__dirname, `../templates/${name}`)
-      const file = fs.readFileSync(filePath).toString()
-      const content = replaceTokensInString(tokens, file)
-      fs.writeFileSync(fileLocalPath, content)
-      console.log(` 📝 ${outputName}`)
-    } else {
-      console.log('This is an unexpected error:', err)
-    }
-  }
+const readAndReplaceFile = (name, tokens, fileLocalPath, outputName) => {
+  const filePath = path.resolve(__dirname, `../templates/${name}`)
+  const file = fs.readFileSync(filePath).toString()
+  const content = replaceTokensInString(tokens, file)
+  fs.writeFileSync(fileLocalPath, content)
 }
 
-const addAllFiles = (pkg, projectName, cwd) => {
+let overwriteAll = false
+const addTemplateFile = (name, options = {}) =>
+  new Promise((resolve, eject) => {
+    const outputName =
+      options.outputName || (options.hidden ? `.${name}` : name)
+    const cwd = options.cwd || '.'
+    const tokens = options.tokens || []
+    const fileLocalPath = `${cwd}/${outputName}`
+    try {
+      fs.readFileSync(fileLocalPath)
+      // ask to replace her/his file
+      if (overwriteAll) {
+        readAndReplaceFile(name, tokens, fileLocalPath, outputName)
+        console.log(` 📝 ${outputName} [overwrited]`)
+        resolve(outputName)
+      } else {
+        enquirer.register('expand', require('prompt-expand'))
+        enquirer
+          .ask([
+            {
+              type: 'expand',
+              message: `Conflict on \`${outputName}\`: `,
+              default: 'Y',
+              name: 'deleteFile',
+              choices: [
+                {
+                  key: 'y',
+                  name: 'Overwrite',
+                  value: 'overwrite'
+                },
+                {
+                  key: 'a',
+                  name: 'Overwrite this one and all next',
+                  value: 'overwrite_all'
+                },
+                {
+                  key: 'x',
+                  name: 'Keep original',
+                  value: 'abort'
+                }
+              ]
+            }
+          ])
+          .then(answers => {
+            const deleteFile = answers.deleteFile
+            if (deleteFile === 'overwrite_all') {
+              overwriteAll = true
+            }
+            if (deleteFile === 'overwrite' || deleteFile === 'overwrite_all') {
+              readAndReplaceFile(name, tokens, fileLocalPath, outputName)
+              console.log(` 📝 ${outputName} [overwrited]`)
+            } else if (deleteFile === 'abort') {
+              console.log(` 📝 ${outputName} [SKIPED]`)
+            }
+            resolve(outputName)
+          })
+          .catch(err => {
+            console.log(err)
+            resolve(outputName)
+          })
+      }
+    } catch (err) {
+      const fileNotFound = err.message.substr(0, 'ENOENT'.length) === 'ENOENT'
+      if (fileNotFound) {
+        readAndReplaceFile(name, tokens, fileLocalPath, outputName)
+        console.log(` 📝 ${outputName}`)
+      } else {
+        console.log('This is an unexpected error:', err)
+      }
+      resolve(outputName)
+    }
+  })
+
+const addAllFiles = (pkg, projectName, cwd, editCurrentProject = false) => {
   const tokens = {
     projectName,
     year: `${new Date().getFullYear()}`,
     author: pkg.author || '',
     fullDate: getFullDate()
   }
-  // set pkg defaults
-  // update license type
-  pkg.license = 'MIT'
-  pkg.version = '0.0.1'
-  pkg.main = 'src/index.js'
+
+  if (!editCurrentProject) {
+    // set pkg defaults
+    // update license type
+    pkg.license = 'MIT'
+    pkg.version = '0.0.1'
+    pkg.main = 'src/index.js'
+  } else {
+    tokens.projectName = pkg.name
+  }
 
   addScripts(pkg, cwd, true)
-  addTemplateFile('editorconfig', { cwd, hidden: true })
-  addTemplateFile('gitignore', { cwd, hidden: true })
-  addTemplateFile('npmignore', { cwd, hidden: true })
-  addTemplateFile('travis.yml', { cwd, hidden: true })
-  addTemplateFile('LICENSE', { cwd, tokens })
-  addTemplateFile('README.basic.md', { cwd, tokens, outputName: 'README.md' })
-  addTemplateFile('CHANGELOG.md', { cwd, tokens })
-  addTemplateFile('index.js', { cwd, tokens, outputName: 'src/index.js' })
-  addTemplateFile('index.test.js', {
-    cwd,
-    tokens,
-    outputName: 'src/__tests__/index.test.js'
-  })
+  return Promise.resolve(true)
+    .then(() => addTemplateFile('editorconfig', { cwd, hidden: true }))
+    .then(() => addTemplateFile('gitignore', { cwd, hidden: true }))
+    .then(() => addTemplateFile('npmignore', { cwd, hidden: true }))
+    .then(() => addTemplateFile('travis.yml', { cwd, hidden: true }))
+    .then(() => addTemplateFile('LICENSE', { cwd, tokens }))
+    .then(() =>
+      addTemplateFile('README.basic.md', {
+        cwd,
+        tokens,
+        outputName: 'README.md'
+      })
+    )
+    .then(() => addTemplateFile('CHANGELOG.md', { cwd, tokens }))
+    .then(() =>
+      addTemplateFile('index.js', { cwd, tokens, outputName: 'src/index.js' })
+    )
+    .then(() =>
+      addTemplateFile('index.test.js', {
+        cwd,
+        tokens,
+        outputName: 'src/__tests__/index.test.js'
+      })
+    )
 }
 
 const help = name => {
+  console.log()
   console.log('Examples:')
   console.log(
     `  ${name} <projectName>\tCreate a new project with <projectName>.`
   )
   console.log(
-    `  ${name} new <projectName>\tCreate a new project with <projectName>.`
+    `  ${name} init\t\tInstall gg-scripts to current project and adds basics files like README, gitignore, etc.`
   )
-  console.log(`  ${name} init\t\tInstall gg-scripts to current project.`)
+  console.log(
+    `  ${name} update\t\tUpdate dependency gg-scripts of current project`
+  )
+  console.log(
+    `  ${name} pre-commit\t\tInstall pre-commit git hook that runs prettier before any commit`
+  )
   console.log(`  ${name} -v\t\t\tShows cli version`)
+  console.log()
+}
+
+const installGGScripts = () => {
+  console.log(' 📦 gg-scripts')
+  spawnSync('npm', ['i', '--save-dev', 'gg-scripts'], {
+    stdio: 'inherit'
+  })
+  console.log()
+  console.log(' ✨ done')
 }
 
 const newProject = (projectName, programName) => {
@@ -127,12 +220,8 @@ const newProject = (projectName, programName) => {
       console.log(' ⛏ git init')
       spawnSync('git', ['init'], { cwd })
 
-      console.log(' 📦 gg-scripts')
-      spawnSync('npm', ['i', '--save-dev', 'gg-scripts'], options)
+      installGGScripts()
 
-      console.log()
-
-      console.log(' ✨ done')
       console.log()
       console.log(`> cd ${projectName}`)
       console.log('> npm start')
@@ -141,11 +230,33 @@ const newProject = (projectName, programName) => {
     }
   } else {
     if (projectName) {
-      console.log(`This folder, \`${projectName}\` already exists.`)
+      console.log(`The folder, \`${projectName}\` already exists.`)
     } else {
       console.log('Please provide a project name.')
       help(programName)
     }
+  }
+}
+
+const init = () => {
+  const pkgJSON = isFileAvailable('package.json')
+  if (pkgJSON) {
+    const pkg = JSON.parse(pkgJSON)
+    addAllFiles(pkg, '', '.', true).then(() => installGGScripts)
+  } else {
+    console.log('no node project detected here 🤔')
+  }
+}
+
+const updateDependencies = () => {
+  const pkgJSON = isFileAvailable('package.json')
+  if (pkgJSON) {
+    const pkg = JSON.parse(pkgJSON)
+    delete pkg.devDependencies['gg-scripts']
+    fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2))
+    installGGScripts()
+  } else {
+    console.log('no node project detected here 🤔')
   }
 }
 
@@ -166,22 +277,12 @@ const cli = () => {
       spawnSync('chmod', ['+x', '.git/hooks/pre-commit'])
       break
     }
-    case 'init': {
-      const pkgJSON = isFileAvailable('package.json')
-      if (pkgJSON) {
-        addScripts(pkgJSON)
-        console.log(' 📦 gg-scripts')
-        spawnSync('npm', ['i', '--save-dev', 'gg-scripts'], {
-          stdio: 'inherit'
-        })
-        console.log(' ✨ done')
-      } else {
-        console.log('no node project detected here 🤔')
-      }
+    case 'update': {
+      updateDependencies()
       break
     }
-    case 'new': {
-      newProject(args.length > 1 ? args[1] : '', programName)
+    case 'init': {
+      init()
       break
     }
     case '-h':
