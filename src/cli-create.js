@@ -65,7 +65,7 @@ const addAllFiles = (pkg, projectName, cwd) => {
     projectName,
     year: `${today.getFullYear()}`,
     author: pkg.author || '',
-    fullYear: `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`
+    fullDate: `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`
   }
   // set pkg defaults
   // update license type
