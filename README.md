@@ -13,16 +13,12 @@ npm install -g george-create-app
 # Usage
 ### Create a new project
 ```sh
-george-create-app new my-awesome-project-name
-# or
-gg-create new my-awesome-project-name
-```
-
-### Initialize current project with gg-scripts
-```sh
-george-create-app init
-# or
-gg-create init
+Examples:
+  george-create-app <projectName>	Create a new project with <projectName>.
+  george-create-app init		Install gg-scripts to current project and adds basics files like README, gitignore, etc.
+  george-create-app update		Update dependency gg-scripts of current project
+  george-create-app pre-commit		Install pre-commit git hook that runs prettier before any commit
+  george-create-app -v			Shows cli version
 ```
 
 ## Development
