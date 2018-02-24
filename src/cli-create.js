@@ -7,15 +7,17 @@ const fs = require('fs')
 
 const replaceAll = (target, search, replacement) => target.replace(new RegExp(search, 'g'), replacement)
 
-const addScripts = (pkgJSON, cwd = '.', parsed=false) => {
+const addScripts = (pkgJSON, cwd = '.', parsed = false) => {
   const scripts = {
+    start: 'node src/index.js',
     test: 'gg-scripts test',
     'test:w': 'gg-scripts test:w',
     lint: 'gg-scripts lint',
-    format: 'gg-scripts format'
+    format: 'gg-scripts format',
+    coverage: 'gg-scripts coverage'
   }
   const pkgPath = `${cwd}/package.json`
-  const pkg = parsed? pkgJSON : JSON.parse(pkgJSON)
+  const pkg = parsed ? pkgJSON : JSON.parse(pkgJSON)
   pkg.scripts = Object.assign(pkg.scripts, scripts)
   const pkgStr = JSON.stringify(pkg, null, 2)
   fs.writeFileSync(pkgPath, pkgStr)
@@ -30,10 +32,10 @@ const isFileAvailable = (filepath, cwd = '.') => {
   }
 }
 
-const replaceTokensInString = (tokens, file) => 
+const replaceTokensInString = (tokens, file) =>
   Object.keys(tokens).reduce((content, key) =>
     replaceAll(content, `#{${key}}`, tokens[key])
-  , file)
+    , file)
 
 const addTemplateFile = (name, options = {}) => {
   const outputName = options.outputName || (options.hidden ? `.${name}` : name)
@@ -76,86 +78,111 @@ const addAllFiles = (pkg, projectName, cwd) => {
   // update license type
   pkg.license = 'MIT'
   pkg.version = '0.0.1'
+  pkg.main = 'src/index.js'
 
   addScripts(pkg, cwd, true)
   addTemplateFile('editorconfig', { cwd, hidden: true })
   addTemplateFile('gitignore', { cwd, hidden: true })
   addTemplateFile('npmignore', { cwd, hidden: true })
+  addTemplateFile('travis.yml', { cwd, hidden: true })
   addTemplateFile('LICENSE', { cwd, tokens })
   addTemplateFile('README.basic.md', { cwd, tokens, outputName: 'README.md' })
   addTemplateFile('CHANGELOG.md', { cwd, tokens })
+  addTemplateFile('index.js', { cwd, tokens, outputName: 'src/index.js' })
+  addTemplateFile('index.test.js', { cwd, tokens, outputName: 'src/__tests__/index.test.js' })
 }
 
-const programName = process.argv[1].substr(process.argv[1].lastIndexOf('/') + 1)
-const args = process.argv.slice(2)
-const cmd = args[0]
+const help = (name) => {
+  console.log('Examples:')
+  console.log(`  ${name} <projectName>\tCreate a new project with <projectName>.`)
+  console.log(`  ${name} new <projectName>\tCreate a new project with <projectName>.`)
+  console.log(`  ${name} init\t\tInstall gg-scritps to current project.`)
+  console.log(`  ${name} -v\t\t\tShows cli version`)
+}
 
-switch (cmd) {
-  case '-v': {
-    console.log({ version })
-    break
-  }
-  case 'init': {
-    const pkgJSON = isFileAvailable('package.json')
-    if (pkgJSON) {
-      addScripts(pkgJSON)
+const newProject = (projectName, programName) => {
+  const result = spawnSync('ls', [projectName])
+  const notFound = result.stderr.toString()
+  if (projectName && notFound) {
+    try {
+      const pwd = spawnSync('pwd')
+        .stdout.toString()
+        .trim()
+      const cwd = path.join(pwd, projectName)
+      const relativePath = `./${projectName}`
+      const options = { cwd, stdio: 'inherit' }
+
+      console.log(` 🔨 create \`${projectName}\``)
+      fs.mkdirSync(projectName)
+      fs.mkdirSync(`${projectName}/src`)
+      fs.mkdirSync(`${projectName}/src/__tests__`)
+
+      console.log(' 📝 package.json')
+      spawnSync('npm', ['init', '-y'], { cwd })
+
+      const pkgJSON = isFileAvailable('package.json', relativePath)
+      const pkg = JSON.parse(pkgJSON)
+      addAllFiles(pkg, projectName, relativePath)
+
+      console.log(' ⛏ git init')
+      spawnSync('git', ['init'], { cwd })
+
+      console.log(' 📦 gg-scripts')
+      spawnSync('npm', ['i', '--save-dev', 'gg-scripts'], options)
+
+      console.log()
+
       console.log(' ✨ done')
-    } else {
-      console.log('no node project detected here 🤔')
+      console.log()
+      console.log(`> cd ${projectName}`)
+      console.log('> npm start')
+    } catch (err) {
+      console.error('', err)
     }
-    break
-  }
-  case 'new': {
-    const projectName = args.length > 1 ? args[1] : ''
-    const result = spawnSync('ls', [projectName])
-    const notFound = result.stderr.toString()
-    if (projectName && notFound) {
-      try {
-        const pwd = spawnSync('pwd')
-          .stdout.toString()
-          .trim()
-        const cwd = path.join(pwd, projectName)
-        const relativePath = `./${projectName}`
-        const options = { cwd, stdio: 'inherit' }
-
-        console.log(` 🔨 create \`${projectName}\``)
-        fs.mkdirSync(projectName)
-
-        console.log(' 📝 package.json')
-        spawnSync('npm', ['init', '-y'], { cwd })
-
-        const pkgJSON = isFileAvailable('package.json', relativePath)
-        const pkg = JSON.parse(pkgJSON)
-        addAllFiles(pkg, projectName, relativePath)
-
-        console.log(' ⛏ git init')
-        spawnSync('git', ['init'], { cwd })
-
-        console.log(' 📦 gg-scripts')
-        spawnSync('npm', ['i', '--save-dev', 'gg-scripts'], options)
-
-        console.log()
-
-        console.log(' ✨ done')
-        console.log()
-        console.log(`> cd ${projectName}`)
-      } catch (err) {
-        console.error('', err)
-      }
+  } else {
+    if (projectName) {
+      console.log(`This folder, \`${projectName}\` already exists.`)
     } else {
-      if (projectName) {
-        console.log(`This folder, \`${projectName}\` already exists.`)
-      } else {
-        console.log('Please provide a project name.')
-      }
+      console.log('Please provide a project name.')
+      help(programName)
     }
-    break
   }
-  default:
-    console.log(cmd ? `Unknown options "${cmd}".` : 'please provide an option')
-    console.log('examples:')
-    console.log(`  ${programName} new <projectName>`)
-    console.log(`  ${programName} init`)
-    console.log(`  ${programName} -v`)
-    process.exit(1)
 }
+
+const cli = () => {
+  const programName = process.argv[1].substr(process.argv[1].lastIndexOf('/') + 1)
+  const args = process.argv.slice(2)
+  const cmd = args[0]
+  
+  switch (cmd) {
+    case '-v': {
+      console.log({ version })
+      break
+    }
+    case 'init': {
+      const pkgJSON = isFileAvailable('package.json')
+      if (pkgJSON) {
+        addScripts(pkgJSON)
+        console.log(' 📦 gg-scripts')
+        spawnSync('npm', ['i', '--save-dev', 'gg-scripts'], { stdio: 'inherit' })
+        console.log(' ✨ done')
+      } else {
+        console.log('no node project detected here 🤔')
+      }
+      break
+    }
+    case 'new': {
+      newProject(args.length > 1 ? args[1] : '', programName)
+      break
+    }
+    case '-h':
+    case '--help': {
+      help(programName)
+      process.exit(1)
+    }
+    default:
+      newProject(cmd, programName)
+  }  
+}
+
+cli()
