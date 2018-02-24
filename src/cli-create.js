@@ -2,6 +2,7 @@
 const leftPad = require('left-pad')
 const spawnSync = require('child_process').spawnSync
 const version = require('../package.json').version
+const packageName = require('../package.json').name
 const path = require('path')
 const fs = require('fs')
 
@@ -62,17 +63,20 @@ const addTemplateFile = (name, options = {}) => {
   }
 }
 
-const addAllFiles = (pkg, projectName, cwd) => {
+const getFullDate = () => {
   const today = new Date()
   const year = today.getFullYear()
   const month = leftPad(today.getMonth(), 2, '0')
   const date = leftPad(today.getDate(), 2, '0')
+  return `${year}-${month}-${date}`
+}
 
+const addAllFiles = (pkg, projectName, cwd) => {
   const tokens = {
     projectName,
     year: `${year}`,
     author: pkg.author || '',
-    fullDate: `${year}-${month}-${date}`
+    fullDate: getFullDate()
   }
   // set pkg defaults
   // update license type
@@ -186,3 +190,48 @@ const cli = () => {
 }
 
 cli()
+
+/**
+ * Check for update
+*/
+const fetch = (url, cb) => {
+  require('https')
+    .get(url, (resp) => {
+      let data = ''
+      resp.on('data', (chunk) => (data += chunk))
+      resp.on('end', () => (typeof cb === 'function') && cb(null, data))
+    })
+    .on('error', (err) => (typeof cb === 'function') && cb(err))
+}
+const getRemoteVersion = (name, cb) => {
+  fetch(`https://img.shields.io/npm/v/${name}.svg?style=flat-square`, (err, response) => {
+    if (!err) {
+      const pos = response.lastIndexOf('textLength="350">v') + 'textLength="350">v'.length
+      const endPos = response.lastIndexOf('</text>')
+      cb(response.substr(pos, endPos - pos))
+    } else {
+      cb(false)
+    }
+  })
+}
+
+const isUpdateAvailable = (filepath, fullDate) => getRemoteVersion(packageName, (remoteVersion) => {
+  if (remoteVersion && remoteVersion !== version) {
+    console.log(`new version available ${packageName}@${remoteVersion}`)
+  }
+  fs.writeFileSync(filepath, JSON.stringify({ fullDate }, null, 2))
+})
+
+const checkIfUpdateAvailable = () => {
+  const fullDate = getFullDate()
+  const filepath = `/tmp/.${packageName}rc`
+  try {
+    const LastTryDate = JSON.parse(fs.readFileSync(filepath)).fullDate
+    if (LastTryDate !== fullDate) {
+      isUpdateAvailable(filepath, fullDate)
+    }
+  } catch (err) {
+    isUpdateAvailable(filepath, fullDate)
+  }
+}
+checkIfUpdateAvailable()
