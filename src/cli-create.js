@@ -235,7 +235,9 @@ const getRemoteVersion = (name, cb) => {
 const isUpdateAvailable = (filepath, fullDate) =>
   getRemoteVersion(packageName, remoteVersion => {
     if (remoteVersion && remoteVersion !== version) {
-      console.log(`new version available ${packageName}@${remoteVersion}`)
+      console.log()
+      console.log(`New version available ${packageName}@${remoteVersion}`)
+      console.log(`  to update run: npm install -g ${packageName}`)
     }
     fs.writeFileSync(filepath, JSON.stringify({ fullDate }, null, 2))
   })
