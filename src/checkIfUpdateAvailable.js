@@ -31,7 +31,7 @@ const getRemoteVersion = (name, cb) => {
   )
 }
 
-const pleaseUpdateMessage = (remoteVersion) => {
+const pleaseUpdateMessage = remoteVersion => {
   console.log()
   console.log(`New version available \`${packageName}@${remoteVersion}\``)
   console.log(`  to update run: npm install -g ${packageName}`)
@@ -41,7 +41,10 @@ const isUpdateAvailable = (filepath, fullDate) =>
     if (remoteVersion && remoteVersion !== version) {
       pleaseUpdateMessage(remoteVersion)
     }
-    fs.writeFileSync(filepath, JSON.stringify({ fullDate, remoteVersion }, null, 2))
+    fs.writeFileSync(
+      filepath,
+      JSON.stringify({ fullDate, remoteVersion }, null, 2)
+    )
   })
 
 const checkIfUpdateAvailable = () => {
@@ -54,7 +57,6 @@ const checkIfUpdateAvailable = () => {
     if (LastTryDate !== fullDate) {
       isUpdateAvailable(filepath, fullDate)
     } else if (remoteVersion && remoteVersion !== version) {
-
     }
   } catch (err) {
     isUpdateAvailable(filepath, fullDate)

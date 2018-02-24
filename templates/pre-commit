@@ -1,5 +1,5 @@
 #!/bin/sh
-if [[ `node_modules/.bin/prettier-eslint --list-different "src/**/*.js"` ]]; then
+if [[ `node_modules/.bin/gg-scripts lint-different` ]]; then
   echo
   echo "⚠️ Code should be fomatted with prettier ⚠️"
   echo "Please run: npm run format"

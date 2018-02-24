@@ -28,7 +28,12 @@
     "cross-spawn": "^6.0.4",
     "left-pad": "^1.2.0"
   },
+  "jest": {
+    "modulePathIgnorePatterns": [
+      "<rootDir>/templates"
+    ]
+  },
   "devDependencies": {
-    "gg-scripts": "^0.1.1"
+    "gg-scripts": "^0.2.2"
   }
 }

@@ -59,8 +59,6 @@ const addTemplateFile = (name, options = {}) => {
   }
 }
 
-
-
 const addAllFiles = (pkg, projectName, cwd) => {
   const tokens = {
     projectName,
@@ -161,6 +159,11 @@ const cli = () => {
   switch (cmd) {
     case '-v': {
       console.log({ version })
+      break
+    }
+    case 'pre-commit': {
+      addTemplateFile('pre-commit', { outputName: '.git/hooks/pre-commit' })
+      spawnSync('chmod', ['+x', '.git/hooks/pre-commit'])
       break
     }
     case 'init': {
