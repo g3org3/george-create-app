@@ -26,23 +26,30 @@ const isFileAvailable = (filepath, cwd = '.') => {
   }
 }
 
-const addEditorConfig = (cwd = '.') => {
-  const editorConfigLocalPath = `${cwd}/.editorconfig`
+const addHiddenTemplateFile = (name, cwd = '.') => {
+  const outputName = `./${name}`
+  const editorConfigLocalPath = `${cwd}/${outputName}`
   try {
     fs.readFileSync(editorConfigLocalPath)
-    console.log('> delete your .editorconfig if you want ours')
+    console.log(`> delete your ${outputName} if you want ours`)
   } catch (err) {
     const fileNotFound = err.message.substr(0, 'ENOENT'.length) === 'ENOENT'
     if (fileNotFound) {
       const editorConfigPath = path.resolve(
         __dirname,
-        '../templates/editorconfig'
+        `../templates/${name}`
       )
       const editorConfig = fs.readFileSync(editorConfigPath)
       fs.writeFileSync(editorConfigLocalPath, editorConfig)
-      console.log('> 📝 add .editorconfig')
+      console.log(`> 📝 add ${outputName}`)
     }
   }
+}
+
+const addAllFiles = (pkgJSON, relativePath) => {
+  addScripts(pkgJSON, relativePath)
+  addHiddenTemplateFile('editorconfig', relativePath)
+  addHiddenTemplateFile('gitignore', relativePath)
 }
 
 const args = process.argv.slice(2)
@@ -52,8 +59,7 @@ switch (cmd) {
   case 'init': {
     const pkgJSON = isFileAvailable('package.json')
     if (pkgJSON) {
-      addScripts(pkgJSON)
-      addEditorConfig()
+      addAllFiles(pkgJSON)
       console.log('> ✨ done')
     } else {
       console.log('no node project detected here 🤔')
@@ -80,10 +86,12 @@ switch (cmd) {
         spawnSync('npm', ['init', '-y'], { cwd })
 
         const pkgJSON = isFileAvailable('package.json', relativePath)
-        addScripts(pkgJSON, relativePath)
-        addEditorConfig(relativePath)
+        addAllFiles(pkgJSON, relativePath)
+
+        console.log('> add: gg-scritps')
         spawnSync('npm', ['i', '--save-dev', 'gg-scripts'], options)
 
+        console.log('> git init')
         spawnSync('git', ['init'], options)
 
         console.log('> ✨ done')
