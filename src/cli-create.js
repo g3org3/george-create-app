@@ -50,6 +50,7 @@ const addAllFiles = (pkgJSON, relativePath) => {
   addScripts(pkgJSON, relativePath)
   addHiddenTemplateFile('editorconfig', relativePath)
   addHiddenTemplateFile('gitignore', relativePath)
+  addHiddenTemplateFile('npmignore', relativePath)
 }
 
 const args = process.argv.slice(2)
