@@ -4,7 +4,8 @@
   "description": "george create app",
   "main": "index.js",
   "bin": {
-    "gg-create": "src/cli-create.js"
+    "gg-create": "src/cli-create.js",
+    "george-create-app": "src/cli-create.js"
   },
   "scripts": {
     "test": "gg-scripts test",
