@@ -1,13 +1,10 @@
 #!/usr/bin/env node
-const leftPad = require('left-pad')
 const spawnSync = require('child_process').spawnSync
 const version = require('../package.json').version
 const checkIfUpdateAvailable = require('./checkIfUpdateAvailable')
+const { getFullDate, replaceAll } = require('./utils')
 const path = require('path')
 const fs = require('fs')
-
-const replaceAll = (target, search, replacement) =>
-  target.replace(new RegExp(search, 'g'), replacement)
 
 const addScripts = (pkgJSON, cwd = '.', parsed = false) => {
   const scripts = {
@@ -62,13 +59,7 @@ const addTemplateFile = (name, options = {}) => {
   }
 }
 
-const getFullDate = () => {
-  const today = new Date()
-  const year = today.getFullYear()
-  const month = leftPad(today.getMonth(), 2, '0')
-  const date = leftPad(today.getDate(), 2, '0')
-  return `${year}-${month}-${date}`
-}
+
 
 const addAllFiles = (pkg, projectName, cwd) => {
   const tokens = {

@@ -1,9 +1,8 @@
+const fs = require('fs')
 const version = require('../package.json').version
 const packageName = require('../package.json').name
+const { getFullDate } = require('./utils')
 
-/**
- * Check for update
- */
 const fetch = (url, cb) => {
   require('https')
     .get(url, resp => {
@@ -34,13 +33,13 @@ const getRemoteVersion = (name, cb) => {
 
 const pleaseUpdateMessage = (remoteVersion) => {
   console.log()
-  console.log(`New version available ${packageName}@${remoteVersion}`)
+  console.log(`New version available \`${packageName}@${remoteVersion}\``)
   console.log(`  to update run: npm install -g ${packageName}`)
 }
 const isUpdateAvailable = (filepath, fullDate) =>
   getRemoteVersion(packageName, remoteVersion => {
     if (remoteVersion && remoteVersion !== version) {
-      pleaseUpdateMessage()
+      pleaseUpdateMessage(remoteVersion)
     }
     fs.writeFileSync(filepath, JSON.stringify({ fullDate, remoteVersion }, null, 2))
   })
