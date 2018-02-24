@@ -60,20 +60,25 @@ const addTemplateFile = (name, options = {}) => {
 }
 
 const addAllFiles = (pkg, projectName, cwd) => {
+  const today = new Date()
   const tokens = {
     projectName,
-    year: `${(new Date()).getFullYear()}`,
-    author: pkg.author || ''
+    year: `${today.getFullYear()}`,
+    author: pkg.author || '',
+    fullYear: `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`
   }
+  // set pkg defaults
   // update license type
   pkg.license = 'MIT'
+  pkg.version = '0.0.1'
+
   addScripts(pkg, cwd, true)
   addTemplateFile('editorconfig', { cwd, hidden: true })
   addTemplateFile('gitignore', { cwd, hidden: true })
   addTemplateFile('npmignore', { cwd, hidden: true })
   addTemplateFile('LICENSE', { cwd, tokens })
   addTemplateFile('README.basic.md', { cwd, tokens, outputName: 'README.md' })
-  addTemplateFile('CHANGELOG.md', { cwd })
+  addTemplateFile('CHANGELOG.md', { cwd, tokens })
 }
 
 const programName = process.argv[1].substr(process.argv[1].lastIndexOf('/') + 1)
