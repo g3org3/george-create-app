@@ -27,8 +27,9 @@ const isFileAvailable = (filepath, cwd = '.') => {
   }
 }
 
-const addHiddenTemplateFile = (name, cwd = '.') => {
-  const outputName = `./${name}`
+const addTemplateFile = (name, options = {}) => {
+  const outputName = options.outputName || (options.hidden ? `.${name}` : name)
+  const cwd = options.cwd || '.'
   const editorConfigLocalPath = `${cwd}/${outputName}`
   try {
     fs.readFileSync(editorConfigLocalPath)
@@ -47,11 +48,13 @@ const addHiddenTemplateFile = (name, cwd = '.') => {
   }
 }
 
-const addAllFiles = (pkgJSON, relativePath) => {
-  addScripts(pkgJSON, relativePath)
-  addHiddenTemplateFile('editorconfig', relativePath)
-  addHiddenTemplateFile('gitignore', relativePath)
-  addHiddenTemplateFile('npmignore', relativePath)
+const addAllFiles = (pkgJSON, cwd) => {
+  addScripts(pkgJSON, cwd)
+  addTemplateFile('editorconfig', { cwd, hidden: true })
+  addTemplateFile('gitignore', { cwd, hidden: true })
+  addTemplateFile('npmignore', { cwd, hidden: true })
+  addTemplateFile('LICENSE', { cwd })
+  addTemplateFile('README.basic.md', { cwd, outputName: 'README.md' })
 }
 
 const args = process.argv.slice(2)
