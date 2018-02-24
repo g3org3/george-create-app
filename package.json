@@ -25,7 +25,8 @@
   "author": "George <7jagjag@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "cross-spawn": "^6.0.4"
+    "cross-spawn": "^6.0.4",
+    "left-pad": "^1.2.0"
   },
   "devDependencies": {
     "gg-scripts": "0.0.2"

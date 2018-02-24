@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const leftPad = require('left-pad')
 const spawnSync = require('child_process').spawnSync
 const version = require('../package.json').version
 const path = require('path')
@@ -61,11 +62,15 @@ const addTemplateFile = (name, options = {}) => {
 
 const addAllFiles = (pkg, projectName, cwd) => {
   const today = new Date()
+  const year = today.getFullYear()
+  const month = leftPad(today.getMonth(), 2, '0')
+  const date = leftPad(today.getDate(), 2, '0')
+
   const tokens = {
     projectName,
-    year: `${today.getFullYear()}`,
+    year: `${year}`,
     author: pkg.author || '',
-    fullDate: `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`
+    fullDate: `${year}-${month}-${date}`
   }
   // set pkg defaults
   // update license type
