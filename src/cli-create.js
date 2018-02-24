@@ -4,7 +4,9 @@ const version = require('../package.json').version
 const path = require('path')
 const fs = require('fs')
 
-const addScripts = (pkgJSON, cwd = '.') => {
+const replaceAll = (target, search, replacement) => target.replace(new RegExp(search, 'g'), replacement)
+
+const addScripts = (pkgJSON, cwd = '.', parsed=false) => {
   const scripts = {
     test: 'gg-scripts test',
     'test:w': 'gg-scripts test:w',
@@ -12,11 +14,11 @@ const addScripts = (pkgJSON, cwd = '.') => {
     format: 'gg-scripts format'
   }
   const pkgPath = `${cwd}/package.json`
-  const pkg = JSON.parse(pkgJSON)
+  const pkg = parsed? pkgJSON : JSON.parse(pkgJSON)
   pkg.scripts = Object.assign(pkg.scripts, scripts)
   const pkgStr = JSON.stringify(pkg, null, 2)
   fs.writeFileSync(pkgPath, pkgStr)
-  console.log('> 🔥 add scripts to package.json')
+  console.log(' 🔥 update package.json scripts')
 }
 
 const isFileAvailable = (filepath, cwd = '.') => {
@@ -27,36 +29,54 @@ const isFileAvailable = (filepath, cwd = '.') => {
   }
 }
 
+const replaceTokensInString = (tokens, file) => 
+  Object.keys(tokens).reduce((content, key) =>
+    replaceAll(content, `#{${key}}`, tokens[key])
+  , file)
+
 const addTemplateFile = (name, options = {}) => {
   const outputName = options.outputName || (options.hidden ? `.${name}` : name)
   const cwd = options.cwd || '.'
-  const editorConfigLocalPath = `${cwd}/${outputName}`
+  const tokens = options.tokens || []
+  const fileLocalPath = `${cwd}/${outputName}`
   try {
-    fs.readFileSync(editorConfigLocalPath)
+    fs.readFileSync(fileLocalPath)
     console.log(`> delete your ${outputName} if you want ours`)
   } catch (err) {
     const fileNotFound = err.message.substr(0, 'ENOENT'.length) === 'ENOENT'
     if (fileNotFound) {
-      const editorConfigPath = path.resolve(
+      const filePath = path.resolve(
         __dirname,
         `../templates/${name}`
       )
-      const editorConfig = fs.readFileSync(editorConfigPath)
-      fs.writeFileSync(editorConfigLocalPath, editorConfig)
-      console.log(`> 📝 add ${outputName}`)
+      const file = fs.readFileSync(filePath).toString()
+      const content = replaceTokensInString(tokens, file)
+      fs.writeFileSync(fileLocalPath, content)
+      console.log(` 📝 ${outputName}`)
+    } else {
+      console.log('This is an unexpected error:', err)
     }
   }
 }
 
-const addAllFiles = (pkgJSON, cwd) => {
-  addScripts(pkgJSON, cwd)
+const addAllFiles = (pkg, projectName, cwd) => {
+  const tokens = {
+    projectName,
+    year: `${(new Date()).getFullYear()}`,
+    author: pkg.author || ''
+  }
+  // update license type
+  pkg.license = 'MIT'
+  addScripts(pkg, cwd, true)
   addTemplateFile('editorconfig', { cwd, hidden: true })
   addTemplateFile('gitignore', { cwd, hidden: true })
   addTemplateFile('npmignore', { cwd, hidden: true })
-  addTemplateFile('LICENSE', { cwd })
-  addTemplateFile('README.basic.md', { cwd, outputName: 'README.md' })
+  addTemplateFile('LICENSE', { cwd, tokens })
+  addTemplateFile('README.basic.md', { cwd, tokens, outputName: 'README.md' })
+  addTemplateFile('CHANGELOG.md', { cwd })
 }
 
+const programName = process.argv[1].substr(process.argv[1].lastIndexOf('/') + 1)
 const args = process.argv.slice(2)
 const cmd = args[0]
 
@@ -68,8 +88,8 @@ switch (cmd) {
   case 'init': {
     const pkgJSON = isFileAvailable('package.json')
     if (pkgJSON) {
-      addAllFiles(pkgJSON)
-      console.log('> ✨ done')
+      addScripts(pkgJSON)
+      console.log(' ✨ done')
     } else {
       console.log('no node project detected here 🤔')
     }
@@ -88,29 +108,33 @@ switch (cmd) {
         const relativePath = `./${projectName}`
         const options = { cwd, stdio: 'inherit' }
 
-        console.log('> create:', projectName)
+        console.log(` 🔨 create \`${projectName}\``)
         fs.mkdirSync(projectName)
 
-        console.log('> create: package.json')
+        console.log(' 📝 package.json')
         spawnSync('npm', ['init', '-y'], { cwd })
 
         const pkgJSON = isFileAvailable('package.json', relativePath)
-        addAllFiles(pkgJSON, relativePath)
+        const pkg = JSON.parse(pkgJSON)
+        addAllFiles(pkg, projectName, relativePath)
 
-        console.log('> add: gg-scritps')
+        console.log(' ⛏ git init')
+        spawnSync('git', ['init'], { cwd })
+
+        console.log(' 📦 gg-scripts')
         spawnSync('npm', ['i', '--save-dev', 'gg-scripts'], options)
 
-        console.log('> git init')
-        spawnSync('git', ['init'], options)
+        console.log()
 
-        console.log('> ✨ done')
+        console.log(' ✨ done')
+        console.log()
         console.log(`> cd ${projectName}`)
       } catch (err) {
         console.error('', err)
       }
     } else {
       if (projectName) {
-        console.log('This folder', projectName, 'already exists.')
+        console.log(`This folder, \`${projectName}\` already exists.`)
       } else {
         console.log('Please provide a project name.')
       }
@@ -118,10 +142,10 @@ switch (cmd) {
     break
   }
   default:
-    console.log(`Unknown options "${cmd}".`)
-    console.log('try:')
-    console.log('  george-create-app new <projectName>')
-    console.log('  george-create-app init')
-    console.log('  george-create-app -v')
+    console.log(cmd ? `Unknown options "${cmd}".` : 'please provide an option')
+    console.log('examples:')
+    console.log(`  ${programName} new <projectName>`)
+    console.log(`  ${programName} init`)
+    console.log(`  ${programName} -v`)
     process.exit(1)
 }

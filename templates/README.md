@@ -27,7 +27,7 @@ npm install
 [https://github.com/g3org3/#{projectName}/blob/master/CHANGELOG.md](https://github.com/g3org3/#{projectName}/blob/master/CHANGELOG.md)
 
 ## Contributors
-* George <7jagjag@gmail.com>
+* #{author}
 
 [travis]: https://travis-ci.org/g3org3/#{projectName}.svg?branch=master
 [travis-url]: https://travis-ci.org/g3org3/#{projectName}

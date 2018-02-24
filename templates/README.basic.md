@@ -14,4 +14,4 @@ npm install -g #{projectName}
 ```
 
 ## Contributors
-* George <7jagjag@gmail.com>
+* #{author}
