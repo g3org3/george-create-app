@@ -96,7 +96,7 @@ const help = name => {
   console.log(
     `  ${name} new <projectName>\tCreate a new project with <projectName>.`
   )
-  console.log(`  ${name} init\t\tInstall gg-scritps to current project.`)
+  console.log(`  ${name} init\t\tInstall gg-scripts to current project.`)
   console.log(`  ${name} -v\t\t\tShows cli version`)
 }
 
