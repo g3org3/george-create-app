@@ -6,7 +6,8 @@ const packageName = require('../package.json').name
 const path = require('path')
 const fs = require('fs')
 
-const replaceAll = (target, search, replacement) => target.replace(new RegExp(search, 'g'), replacement)
+const replaceAll = (target, search, replacement) =>
+  target.replace(new RegExp(search, 'g'), replacement)
 
 const addScripts = (pkgJSON, cwd = '.', parsed = false) => {
   const scripts = {
@@ -34,9 +35,10 @@ const isFileAvailable = (filepath, cwd = '.') => {
 }
 
 const replaceTokensInString = (tokens, file) =>
-  Object.keys(tokens).reduce((content, key) =>
-    replaceAll(content, `#{${key}}`, tokens[key])
-    , file)
+  Object.keys(tokens).reduce(
+    (content, key) => replaceAll(content, `#{${key}}`, tokens[key]),
+    file
+  )
 
 const addTemplateFile = (name, options = {}) => {
   const outputName = options.outputName || (options.hidden ? `.${name}` : name)
@@ -49,10 +51,7 @@ const addTemplateFile = (name, options = {}) => {
   } catch (err) {
     const fileNotFound = err.message.substr(0, 'ENOENT'.length) === 'ENOENT'
     if (fileNotFound) {
-      const filePath = path.resolve(
-        __dirname,
-        `../templates/${name}`
-      )
+      const filePath = path.resolve(__dirname, `../templates/${name}`)
       const file = fs.readFileSync(filePath).toString()
       const content = replaceTokensInString(tokens, file)
       fs.writeFileSync(fileLocalPath, content)
@@ -74,7 +73,7 @@ const getFullDate = () => {
 const addAllFiles = (pkg, projectName, cwd) => {
   const tokens = {
     projectName,
-    year: `${year}`,
+    year: `${new Date().getFullYear()}`,
     author: pkg.author || '',
     fullDate: getFullDate()
   }
@@ -93,13 +92,21 @@ const addAllFiles = (pkg, projectName, cwd) => {
   addTemplateFile('README.basic.md', { cwd, tokens, outputName: 'README.md' })
   addTemplateFile('CHANGELOG.md', { cwd, tokens })
   addTemplateFile('index.js', { cwd, tokens, outputName: 'src/index.js' })
-  addTemplateFile('index.test.js', { cwd, tokens, outputName: 'src/__tests__/index.test.js' })
+  addTemplateFile('index.test.js', {
+    cwd,
+    tokens,
+    outputName: 'src/__tests__/index.test.js'
+  })
 }
 
-const help = (name) => {
+const help = name => {
   console.log('Examples:')
-  console.log(`  ${name} <projectName>\tCreate a new project with <projectName>.`)
-  console.log(`  ${name} new <projectName>\tCreate a new project with <projectName>.`)
+  console.log(
+    `  ${name} <projectName>\tCreate a new project with <projectName>.`
+  )
+  console.log(
+    `  ${name} new <projectName>\tCreate a new project with <projectName>.`
+  )
   console.log(`  ${name} init\t\tInstall gg-scritps to current project.`)
   console.log(`  ${name} -v\t\t\tShows cli version`)
 }
@@ -154,10 +161,12 @@ const newProject = (projectName, programName) => {
 }
 
 const cli = () => {
-  const programName = process.argv[1].substr(process.argv[1].lastIndexOf('/') + 1)
+  const programName = process.argv[1].substr(
+    process.argv[1].lastIndexOf('/') + 1
+  )
   const args = process.argv.slice(2)
   const cmd = args[0]
-  
+
   switch (cmd) {
     case '-v': {
       console.log({ version })
@@ -168,7 +177,9 @@ const cli = () => {
       if (pkgJSON) {
         addScripts(pkgJSON)
         console.log(' 📦 gg-scripts')
-        spawnSync('npm', ['i', '--save-dev', 'gg-scripts'], { stdio: 'inherit' })
+        spawnSync('npm', ['i', '--save-dev', 'gg-scripts'], {
+          stdio: 'inherit'
+        })
         console.log(' ✨ done')
       } else {
         console.log('no node project detected here 🤔')
@@ -186,41 +197,48 @@ const cli = () => {
     }
     default:
       newProject(cmd, programName)
-  }  
+  }
 }
 
 cli()
 
 /**
  * Check for update
-*/
+ */
 const fetch = (url, cb) => {
   require('https')
-    .get(url, (resp) => {
+    .get(url, resp => {
       let data = ''
-      resp.on('data', (chunk) => (data += chunk))
-      resp.on('end', () => (typeof cb === 'function') && cb(null, data))
+      resp.on('data', chunk => (data += chunk))
+      resp.on('end', () => typeof cb === 'function' && cb(null, data))
     })
-    .on('error', (err) => (typeof cb === 'function') && cb(err))
+    .on('error', err => typeof cb === 'function' && cb(err))
 }
 const getRemoteVersion = (name, cb) => {
-  fetch(`https://img.shields.io/npm/v/${name}.svg?style=flat-square`, (err, response) => {
-    if (!err) {
-      const pos = response.lastIndexOf('textLength="350">v') + 'textLength="350">v'.length
-      const endPos = response.lastIndexOf('</text>')
-      cb(response.substr(pos, endPos - pos))
-    } else {
-      cb(false)
+  fetch(
+    `https://img.shields.io/npm/v/${name}.svg?style=flat-square`,
+    (err, response) => {
+      if (!err) {
+        const pos =
+          response.lastIndexOf('textLength="350">v') +
+          'textLength="350">v'.length
+        const endPos = response.lastIndexOf('</text>')
+        cb(response.substr(pos, endPos - pos))
+      } else {
+        // eslint-disable-next-line
+        cb(false)
+      }
     }
-  })
+  )
 }
 
-const isUpdateAvailable = (filepath, fullDate) => getRemoteVersion(packageName, (remoteVersion) => {
-  if (remoteVersion && remoteVersion !== version) {
-    console.log(`new version available ${packageName}@${remoteVersion}`)
-  }
-  fs.writeFileSync(filepath, JSON.stringify({ fullDate }, null, 2))
-})
+const isUpdateAvailable = (filepath, fullDate) =>
+  getRemoteVersion(packageName, remoteVersion => {
+    if (remoteVersion && remoteVersion !== version) {
+      console.log(`new version available ${packageName}@${remoteVersion}`)
+    }
+    fs.writeFileSync(filepath, JSON.stringify({ fullDate }, null, 2))
+  })
 
 const checkIfUpdateAvailable = () => {
   const fullDate = getFullDate()

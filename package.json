@@ -29,6 +29,6 @@
     "left-pad": "^1.2.0"
   },
   "devDependencies": {
-    "gg-scripts": "0.0.2"
+    "gg-scripts": "^0.1.1"
   }
 }
