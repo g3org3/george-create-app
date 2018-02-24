@@ -49,7 +49,7 @@ const readAndReplaceFile = (name, tokens, fileLocalPath, outputName) => {
 
 let overwriteAll = false
 const addTemplateFile = (name, options = {}) =>
-  new Promise((resolve, eject) => {
+  new Promise((resolve, reject) => {
     const outputName =
       options.outputName || (options.hidden ? `.${name}` : name)
     const cwd = options.cwd || '.'
@@ -203,7 +203,6 @@ const newProject = (projectName, programName) => {
         .trim()
       const cwd = path.join(pwd, projectName)
       const relativePath = `./${projectName}`
-      const options = { cwd, stdio: 'inherit' }
 
       console.log(` 🔨 create \`${projectName}\``)
       fs.mkdirSync(projectName)
