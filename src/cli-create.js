@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 const spawnSync = require('child_process').spawnSync
+const version = require('../package.json').version
 const path = require('path')
 const fs = require('fs')
 
@@ -57,6 +58,10 @@ const args = process.argv.slice(2)
 const cmd = args[0]
 
 switch (cmd) {
+  case '-v': {
+    console.log({ version })
+    break
+  }
   case 'init': {
     const pkgJSON = isFileAvailable('package.json')
     if (pkgJSON) {
@@ -110,6 +115,10 @@ switch (cmd) {
     break
   }
   default:
-    console.log(`Unknown script "${cmd}".`)
+    console.log(`Unknown options "${cmd}".`)
+    console.log('try:')
+    console.log('  george-create-app new <projectName>')
+    console.log('  george-create-app init')
+    console.log('  george-create-app -v')
     process.exit(1)
 }
