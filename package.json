@@ -1,0 +1,32 @@
+{
+  "name": "george-create-app",
+  "version": "0.0.1",
+  "description": "george create app",
+  "main": "index.js",
+  "bin": {
+    "gg-create": "src/cli-create.js"
+  },
+  "scripts": {
+    "test": "gg-scripts test",
+    "test:w": "gg-scripts test:w",
+    "lint": "gg-scripts lint",
+    "format": "gg-scripts format"
+  },
+  "keywords": [],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/g3org3/george-create-app.git"
+  },
+  "bugs": {
+    "url": "https://github.com/g3org3/george-create-app/issues"
+  },
+  "homepage": "https://github.com/g3org3/george-create-app#readme",
+  "author": "George <7jagjag@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "cross-spawn": "^6.0.4"
+  },
+  "devDependencies": {
+    "gg-scripts": "0.0.2"
+  }
+}
