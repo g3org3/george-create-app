@@ -1,7 +1,7 @@
 version: '2'
 services:
   app:
-    image: #{registry}:#{projectName}:dev
+    image: #{registry}/#{projectName}:dev
     ports:
       - 3000:3000
     environment:

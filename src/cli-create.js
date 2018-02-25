@@ -225,8 +225,13 @@ const setupDocker = async pkg => {
   createDir('docker')
   await addTemplateFile('dockerignore', { hidden: true })
   await addTemplateFile('Dockerfile', { outputName: 'docker/Dockerfile' })
+  const { registry } = await enquirer.ask([questions.dockerRegistry])
   await addTemplateFile('docker-compose.yml', {
-    outputName: 'docker/docker-compose.yml'
+    outputName: 'docker/docker-compose.yml',
+    tokens: {
+      projectName: pkg.name,
+      registry
+    }
   })
 }
 
