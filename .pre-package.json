@@ -1,0 +1,9 @@
+{
+  "name": "george-create-app",
+  "dependencies": {
+    "cross-spawn": "^6.0.4",
+    "enquirer": "^1.0.3",
+    "left-pad": "^1.2.0",
+    "prompt-expand": "^1.0.0"
+ }
+}

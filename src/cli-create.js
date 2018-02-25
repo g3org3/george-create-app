@@ -272,7 +272,7 @@ const cli = async () => {
       break
     }
     case 'run': {
-      const cliargs = args.slice(2)
+      const cliargs = args.slice(1)
       spawnSync('./node_modules/.bin/gg-scripts', cliargs, { stdio: 'inherit' })
       break
     }
