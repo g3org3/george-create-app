@@ -3,7 +3,7 @@
 cli to create base node apps with gg-scripts
 
 ## Getting Started
-You will need Node >= 7 installed. [How do I install node? click here to find out about nvm](https://github.com/creationix/nvm#installation)
+You will need Node >= 8 installed. [How do I install node? click here to find out about nvm](https://github.com/creationix/nvm#installation)
 
 ### Installation
 ```sh

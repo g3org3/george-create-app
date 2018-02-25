@@ -9,7 +9,8 @@ const {
   createDir,
   parseJSON,
   canIOverwriteYourFile,
-  questions
+  questions,
+  isFileAvailable
 } = require('./utils')
 
 const enquirer = new Enquirer()
@@ -35,21 +36,13 @@ const addScripts = (pkg, cwd = '.') => {
   console.log(' 🔥 update package.json scripts')
 }
 
-const isFileAvailable = (filepath, cwd = '.') => {
-  try {
-    return fs.readFileSync(`${cwd}/${filepath}`)
-  } catch (err) {
-    return false
-  }
-}
-
 const replaceTokensInString = (tokens, file) =>
   Object.keys(tokens).reduce(
     (content, key) => replaceAll(content, `#{${key}}`, tokens[key]),
     file
   )
 
-const readAndReplaceFile = (name, tokens, fileLocalPath, outputName) => {
+const readAndReplaceFileContent = (name, tokens, fileLocalPath, outputName) => {
   const filePath = path.resolve(__dirname, `../templates/${name}`)
   const file = fs.readFileSync(filePath).toString()
   const content = replaceTokensInString(tokens, file)
@@ -57,53 +50,48 @@ const readAndReplaceFile = (name, tokens, fileLocalPath, outputName) => {
 }
 
 let overwriteAll = false
-const addTemplateFile = (name, options = {}) =>
-  new Promise((resolve, reject) => {
-    const outputName =
-      options.outputName || (options.hidden ? `.${name}` : name)
-    const cwd = options.cwd || '.'
-    const tokens = options.tokens || []
-    const fileLocalPath = `${cwd}/${outputName}`
-    try {
-      fs.readFileSync(fileLocalPath)
-      // ask to replace her/his file
-      if (!overwriteAll) {
-        enquirer
-          .ask(canIOverwriteYourFile(outputName))
-          .then(answers => {
-            const deleteFile = answers.deleteFile
-            if (deleteFile === 'overwrite_all') {
-              overwriteAll = true
-            }
-            if (deleteFile === 'overwrite' || deleteFile === 'overwrite_all') {
-              readAndReplaceFile(name, tokens, fileLocalPath, outputName)
-              console.log(` 📝 ${outputName} [overwrited]`)
-            } else if (deleteFile === 'abort') {
-              console.log(` 📝 ${outputName} [SKIPED]`)
-            }
-            resolve(outputName)
-          })
-          .catch(err => {
-            console.log(err)
-            resolve(outputName)
-          })
-      } else {
-        // we have permission to overwrite all files
-        readAndReplaceFile(name, tokens, fileLocalPath, outputName)
-        console.log(` 📝 ${outputName} [overwrited]`)
-        resolve(outputName)
+const addTemplateFile = async (name, options = {}) => {
+  const outputName = options.outputName || (options.hidden ? `.${name}` : name)
+  const cwd = options.cwd || '.'
+  const tokens = options.tokens || []
+  const fileLocalPath = `${cwd}/${outputName}`
+  try {
+    fs.readFileSync(fileLocalPath)
+    // ask to replace her/his file
+    if (!overwriteAll) {
+      const { overwrite } = await enquirer.ask(
+        canIOverwriteYourFile(outputName)
+      )
+      if (overwrite === 'overwrite_all') {
+        overwriteAll = true
       }
-    } catch (err) {
-      const fileNotFound = err.message.substr(0, 'ENOENT'.length) === 'ENOENT'
-      if (fileNotFound) {
-        readAndReplaceFile(name, tokens, fileLocalPath, outputName)
-        console.log(` 📝 ${outputName}`)
-      } else {
-        console.log(' ⚠️ This is an unexpected error ⚠️ ', err)
+      switch (overwrite) {
+        case 'overwrite':
+        case 'overwrite_all': {
+          readAndReplaceFileContent(name, tokens, fileLocalPath, outputName)
+          console.log(` 📝 ${outputName} [overwrited]`)
+          break
+        }
+        case 'abort': {
+          console.log(` 📝 ${outputName} [SKIPED]`)
+        }
       }
-      resolve(outputName)
+    } else {
+      // we have permission to overwrite all files
+      readAndReplaceFileContent(name, tokens, fileLocalPath, outputName)
+      console.log(` 📝 ${outputName} [overwrited]`)
     }
-  })
+  } catch (err) {
+    const fileNotFound = err.message.substr(0, 'ENOENT'.length) === 'ENOENT'
+    if (fileNotFound) {
+      readAndReplaceFileContent(name, tokens, fileLocalPath, outputName)
+      console.log(` 📝 ${outputName}`)
+    } else {
+      console.log(' ⚠️ This is an unexpected error ⚠️ ', err)
+    }
+  }
+  return outputName
+}
 
 const addAllFiles = async (
   pkg,

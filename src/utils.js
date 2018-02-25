@@ -17,6 +17,14 @@ exports.parseJSON = data => {
   }
 }
 
+exports.isFileAvailable = (filepath, cwd = '.') => {
+  try {
+    return fs.readFileSync(`${cwd}/${filepath}`)
+  } catch (err) {
+    return false
+  }
+}
+
 exports.questions = {
   dockerRegistry: {
     type: 'input',
@@ -31,7 +39,7 @@ exports.canIOverwriteYourFile = outputName => [
     type: 'expand',
     message: `Conflict on \`${outputName}\`: `,
     default: 'Y',
-    name: 'deleteFile',
+    name: 'overwrite',
     choices: [
       {
         key: 'y',
