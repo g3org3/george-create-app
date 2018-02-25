@@ -66,9 +66,10 @@ exports.createDir = (filepath, cwd = '.') => {
     fs.mkdirSync(`${cwd}/${filepath}`)
     return true
   } catch (err) {
+    // we know it fails because the folder already exists
     const dirExists = err.message.indexOf('EEXIST:') === 0
     if (!dirExists) {
-      console.log(' ⚠️ This is an unexpected error ⚠️ ', err.message)
+      throw err
     }
   }
 }
