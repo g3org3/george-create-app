@@ -1,5 +1,6 @@
 const leftPad = require('left-pad')
 const fs = require('fs')
+const { bugs } = require('../package.json')
 
 exports.getFullDate = () => {
   const today = new Date()
