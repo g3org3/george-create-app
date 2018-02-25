@@ -10,6 +10,13 @@
 * example
 -->
 ## Next
+## 0.6.0 (2018-02-25)
+#### Enhancement
+* add docker support
+* add deployment support with ansible
+
+#### Internal
+* async/await refactos
 
 ## 0.0.1 -> 0.5.0 (2018-02-24)
 #### Enhancement
