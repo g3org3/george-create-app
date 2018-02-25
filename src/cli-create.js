@@ -271,6 +271,11 @@ const cli = async () => {
       console.log(' ✨ done')
       break
     }
+    case 'run': {
+      const cliargs = args.slice(2)
+      spawnSync('./node_modules/gg-scripts', cliargs, { stdio: 'inherit' })
+      break
+    }
     case 'update': {
       await middleware(updateDependencies)
       break

@@ -36,6 +36,6 @@
     ]
   },
   "devDependencies": {
-    "gg-scripts": "^0.2.2"
+    "gg-scripts": "^0.3.1"
   }
 }
