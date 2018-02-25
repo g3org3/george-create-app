@@ -28,7 +28,9 @@ const addScripts = (pkg, cwd = '.') => {
     coverage: 'gg-scripts coverage',
     build: 'gg-scripts docker-build',
     up: 'gg-scripts docker-run',
-    stop: 'gg-scripts docker-stop'
+    stop: 'gg-scripts docker-stop',
+    'deploy-init': 'gg-scripts deploy-init',
+    deploy: 'gg-scripts deploy'
   }
   pkg.scripts = Object.assign(pkg.scripts, scripts)
   const pkgStr = JSON.stringify(pkg, null, 2)
