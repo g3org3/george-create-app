@@ -87,7 +87,7 @@ const addTemplateFile = async (name, options = {}) => {
       readAndReplaceFileContent(name, tokens, fileLocalPath, outputName)
       console.log(` 📝 ${outputName}`)
     } else {
-      console.log(' ⚠️ This is an unexpected error ⚠️ ', err)
+      throw err
     }
   }
   return outputName
@@ -157,40 +157,35 @@ const installGGScripts = cwd => {
   })
 }
 
-const newProject = (projectName, programName) => {
+const newProject = async (projectName, programName) => {
   const result = spawnSync('ls', [projectName])
   const notFound = result.stderr.toString()
   if (projectName && notFound) {
-    try {
-      const pwd = spawnSync('pwd')
-        .stdout.toString()
-        .trim()
-      const cwd = path.join(pwd, projectName)
-      const relativePath = `./${projectName}`
+    const pwd = spawnSync('pwd')
+      .stdout.toString()
+      .trim()
+    const cwd = path.join(pwd, projectName)
+    const relativePath = `./${projectName}`
 
-      console.log(` 🔨 create \`${projectName}\``)
-      createDir(projectName)
-      createDir(`${projectName}/src`)
-      createDir(`${projectName}/src/__tests__`)
+    console.log(` 🔨 create \`${projectName}\``)
+    createDir(projectName)
+    createDir(`${projectName}/src`)
+    createDir(`${projectName}/src/__tests__`)
 
-      console.log(' 📝 package.json')
-      spawnSync('npm', ['init', '-y'], { cwd })
+    console.log(' 📝 package.json')
+    spawnSync('npm', ['init', '-y'], { cwd })
 
-      const pkgJSON = isFileAvailable('package.json', relativePath)
-      const pkg = parseJSON(pkgJSON)
-      addAllFiles(pkg, projectName, relativePath).then(() => {
-        console.log(' ⛏ git init')
-        spawnSync('git', ['init'], { cwd })
+    const pkgJSON = isFileAvailable('package.json', relativePath)
+    const pkg = parseJSON(pkgJSON)
+    await addAllFiles(pkg, projectName, relativePath)
+    console.log(' ⛏ git init')
+    spawnSync('git', ['init'], { cwd })
 
-        installGGScripts(cwd)
+    installGGScripts(cwd)
 
-        console.log()
-        console.log(`> cd ${projectName}`)
-        console.log('> npm start')
-      })
-    } catch (err) {
-      console.error('', err)
-    }
+    console.log()
+    console.log(`> cd ${projectName}`)
+    console.log('> npm start')
   } else {
     if (projectName) {
       console.log(`The folder, \`${projectName}\` already exists.`)
@@ -248,12 +243,13 @@ const setupDeploy = async pkg => {
   })
 }
 
-const cli = () => {
+const cli = async () => {
   const programName = process.argv[1].substr(
     process.argv[1].lastIndexOf('/') + 1
   )
   const args = process.argv.slice(2)
   const cmd = args[0]
+  const flag = args.length > 1 ? args[1] : ''
 
   switch (cmd) {
     case '-v': {
@@ -261,37 +257,37 @@ const cli = () => {
       break
     }
     case 'pre-commit': {
-      addTemplateFile('pre-commit', {
+      await addTemplateFile('pre-commit', {
         outputName: '.git/hooks/pre-commit'
-      }).then(() => {
-        spawnSync('chmod', ['+x', '.git/hooks/pre-commit'])
-        console.log(' ✨ done')
       })
+      spawnSync('chmod', ['+x', '.git/hooks/pre-commit'])
+      console.log(' ✨ done')
       break
     }
     case 'update': {
-      middleware(updateDependencies)
+      await middleware(updateDependencies)
       break
     }
     case 'deploy': {
-      middleware(setupDeploy)
+      await middleware(setupDeploy)
       break
     }
     case 'docker': {
-      middleware(setupDocker)
+      await middleware(setupDocker)
       break
     }
     case 'init': {
-      middleware(init)
+      await middleware(init)
       break
     }
     case '-h':
     case '--help': {
       help(programName)
-      process.exit(1)
+      break
     }
-    default:
-      newProject(cmd, programName)
+    default: {
+      await newProject(cmd, programName)
+    }
   }
 }
 

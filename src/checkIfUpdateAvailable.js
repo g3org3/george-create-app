@@ -62,13 +62,13 @@ const isUpdateAvailable = async (filepath, packageName, version) => {
   return false
 }
 
-const checkIfUpdateAvailable = () => {
+const checkIfUpdateAvailable = async () => {
   // global packageName, version
   const fullDate = getFullDate()
   const filepath = `/tmp/.${packageName}rc`
   const { LastTryDate } = store(filepath).get(packageName)
   if (LastTryDate !== fullDate) {
-    isUpdateAvailable(filepath, packageName, version)
+    await isUpdateAvailable(filepath, packageName, version)
   }
 }
 
