@@ -249,7 +249,7 @@ const cli = async () => {
   )
   const args = process.argv.slice(2)
   const cmd = args[0]
-  const flag = args.length > 1 ? args[1] : ''
+  // const flag = args.length > 1 ? args[1] : ''
 
   switch (cmd) {
     case '-v': {
