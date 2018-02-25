@@ -1,3 +1,4 @@
+[![Build Status][travis]][travis-url]
 [![npm package][npm-image]](npm-url)
 # george-create-app
 cli to create base node apps with gg-scripts
