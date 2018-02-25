@@ -4,7 +4,7 @@
   "description": "george create app",
   "main": "index.js",
   "bin": {
-    "gg-create": "src/index.js",
+    "gg": "src/index.js",
     "george-create-app": "src/index.js"
   },
   "scripts": {
