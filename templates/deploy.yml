@@ -1,0 +1,14 @@
+---
+- hosts: web
+  remote_user: george
+  tasks:
+    - name: Pull new image
+      shell: docker pull #{registry}/#{projectName}:latest
+
+    - name: Stop my-app
+      shell: cd /opt/g3org3/#{projectName} && docker-compose stop && docker-compose rm -f
+      ignore_errors: yes
+
+    - name: Start my-app
+      shell: cd /opt/g3org3/#{projectName} && docker-compose up -d
+      ignore_errors: yes

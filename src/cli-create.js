@@ -1,25 +1,34 @@
-#!/usr/bin/env node
 const path = require('path')
 const fs = require('fs')
 const spawnSync = require('child_process').spawnSync
 const Enquirer = require('enquirer')
 const version = require('../package.json').version
-const checkIfUpdateAvailable = require('./checkIfUpdateAvailable')
-const { getFullDate, replaceAll } = require('./utils')
+const {
+  getFullDate,
+  replaceAll,
+  createDir,
+  parseJSON,
+  canIOverwriteYourFile,
+  questions
+} = require('./utils')
 
 const enquirer = new Enquirer()
+enquirer.register('expand', require('prompt-expand'))
+enquirer.register('input', require('prompt-input'))
 
-const addScripts = (pkgJSON, cwd = '.', parsed = false) => {
+const addScripts = (pkg, cwd = '.') => {
+  const pkgPath = `${cwd}/package.json`
   const scripts = {
-    start: 'node src/index.js',
     test: 'gg-scripts test',
+    start: 'node src/index.js',
     'test:w': 'gg-scripts test:w',
     lint: 'gg-scripts lint',
     format: 'gg-scripts format',
-    coverage: 'gg-scripts coverage'
+    coverage: 'gg-scripts coverage',
+    build: 'gg-scripts docker-build',
+    up: 'gg-scripts docker-run',
+    stop: 'gg-scripts docker-stop'
   }
-  const pkgPath = `${cwd}/package.json`
-  const pkg = parsed ? pkgJSON : JSON.parse(pkgJSON)
   pkg.scripts = Object.assign(pkg.scripts, scripts)
   const pkgStr = JSON.stringify(pkg, null, 2)
   fs.writeFileSync(pkgPath, pkgStr)
@@ -58,38 +67,9 @@ const addTemplateFile = (name, options = {}) =>
     try {
       fs.readFileSync(fileLocalPath)
       // ask to replace her/his file
-      if (overwriteAll) {
-        readAndReplaceFile(name, tokens, fileLocalPath, outputName)
-        console.log(` 📝 ${outputName} [overwrited]`)
-        resolve(outputName)
-      } else {
-        enquirer.register('expand', require('prompt-expand'))
+      if (!overwriteAll) {
         enquirer
-          .ask([
-            {
-              type: 'expand',
-              message: `Conflict on \`${outputName}\`: `,
-              default: 'Y',
-              name: 'deleteFile',
-              choices: [
-                {
-                  key: 'y',
-                  name: 'Overwrite',
-                  value: 'overwrite'
-                },
-                {
-                  key: 'a',
-                  name: 'Overwrite this one and all next',
-                  value: 'overwrite_all'
-                },
-                {
-                  key: 'x',
-                  name: 'Keep original',
-                  value: 'abort'
-                }
-              ]
-            }
-          ])
+          .ask(canIOverwriteYourFile(outputName))
           .then(answers => {
             const deleteFile = answers.deleteFile
             if (deleteFile === 'overwrite_all') {
@@ -107,6 +87,11 @@ const addTemplateFile = (name, options = {}) =>
             console.log(err)
             resolve(outputName)
           })
+      } else {
+        // we have permission to overwrite all files
+        readAndReplaceFile(name, tokens, fileLocalPath, outputName)
+        console.log(` 📝 ${outputName} [overwrited]`)
+        resolve(outputName)
       }
     } catch (err) {
       const fileNotFound = err.message.substr(0, 'ENOENT'.length) === 'ENOENT'
@@ -114,13 +99,18 @@ const addTemplateFile = (name, options = {}) =>
         readAndReplaceFile(name, tokens, fileLocalPath, outputName)
         console.log(` 📝 ${outputName}`)
       } else {
-        console.log('This is an unexpected error:', err)
+        console.log(' ⚠️ This is an unexpected error ⚠️ ', err)
       }
       resolve(outputName)
     }
   })
 
-const addAllFiles = (pkg, projectName, cwd, editCurrentProject = false) => {
+const addAllFiles = async (
+  pkg,
+  projectName,
+  cwd,
+  editCurrentProject = false
+) => {
   const tokens = {
     projectName,
     year: `${new Date().getFullYear()}`,
@@ -139,58 +129,44 @@ const addAllFiles = (pkg, projectName, cwd, editCurrentProject = false) => {
   }
 
   addScripts(pkg, cwd, true)
-  return Promise.resolve(true)
-    .then(() => addTemplateFile('editorconfig', { cwd, hidden: true }))
-    .then(() => addTemplateFile('gitignore', { cwd, hidden: true }))
-    .then(() => addTemplateFile('npmignore', { cwd, hidden: true }))
-    .then(() => addTemplateFile('travis.yml', { cwd, hidden: true }))
-    .then(() => addTemplateFile('LICENSE', { cwd, tokens }))
-    .then(() =>
-      addTemplateFile('README.basic.md', {
-        cwd,
-        tokens,
-        outputName: 'README.md'
-      })
-    )
-    .then(() => addTemplateFile('CHANGELOG.md', { cwd, tokens }))
-    .then(() =>
-      addTemplateFile('index.js', { cwd, tokens, outputName: 'src/index.js' })
-    )
-    .then(() =>
-      addTemplateFile('index.test.js', {
-        cwd,
-        tokens,
-        outputName: 'src/__tests__/index.test.js'
-      })
-    )
+  await addTemplateFile('editorconfig', { cwd, hidden: true })
+  await addTemplateFile('gitignore', { cwd, hidden: true })
+  await addTemplateFile('npmignore', { cwd, hidden: true })
+  await addTemplateFile('travis.yml', { cwd, hidden: true })
+  await addTemplateFile('LICENSE', { cwd, tokens })
+  await addTemplateFile('CHANGELOG.md', { cwd, tokens })
+  await addTemplateFile('index.js', { cwd, tokens, outputName: 'src/index.js' })
+  await addTemplateFile('README.basic.md', {
+    cwd,
+    tokens,
+    outputName: 'README.md'
+  })
+  await addTemplateFile('index.test.js', {
+    cwd,
+    tokens,
+    outputName: 'src/__tests__/index.test.js'
+  })
 }
 
 const help = name => {
-  console.log()
-  console.log('Examples:')
-  console.log(
-    `  ${name} <projectName>\tCreate a new project with <projectName>.`
-  )
-  console.log(
-    `  ${name} init\t\tInstall gg-scripts to current project and adds basics files like README, gitignore, etc.`
-  )
-  console.log(
-    `  ${name} update\t\tUpdate dependency gg-scripts of current project`
-  )
-  console.log(
-    `  ${name} pre-commit\t\tInstall pre-commit git hook that runs prettier before any commit`
-  )
-  console.log(`  ${name} -v\t\t\tShows cli version`)
-  console.log()
+  console.log(`
+
+Examples:
+  ${name} <projectName>\tCreate a new project with <projectName>.
+  ${name} init\t\tInstall gg-scripts to current project and adds basics files like README, gitignore, etc.
+  ${name} update\t\tUpdate dependency gg-scripts of current project
+  ${name} pre-commit\t\tInstall pre-commit git hook that runs prettier before any commit
+  ${name} -v\t\t\tShows cli version
+
+  `)
 }
 
-const installGGScripts = () => {
+const installGGScripts = cwd => {
   console.log(' 📦 gg-scripts')
   spawnSync('npm', ['i', '--save-dev', 'gg-scripts'], {
-    stdio: 'inherit'
+    stdio: 'inherit',
+    cwd
   })
-  console.log()
-  console.log(' ✨ done')
 }
 
 const newProject = (projectName, programName) => {
@@ -205,25 +181,25 @@ const newProject = (projectName, programName) => {
       const relativePath = `./${projectName}`
 
       console.log(` 🔨 create \`${projectName}\``)
-      fs.mkdirSync(projectName)
-      fs.mkdirSync(`${projectName}/src`)
-      fs.mkdirSync(`${projectName}/src/__tests__`)
+      createDir(projectName)
+      createDir(`${projectName}/src`)
+      createDir(`${projectName}/src/__tests__`)
 
       console.log(' 📝 package.json')
       spawnSync('npm', ['init', '-y'], { cwd })
 
       const pkgJSON = isFileAvailable('package.json', relativePath)
-      const pkg = JSON.parse(pkgJSON)
-      addAllFiles(pkg, projectName, relativePath)
+      const pkg = parseJSON(pkgJSON)
+      addAllFiles(pkg, projectName, relativePath).then(() => {
+        console.log(' ⛏ git init')
+        spawnSync('git', ['init'], { cwd })
 
-      console.log(' ⛏ git init')
-      spawnSync('git', ['init'], { cwd })
+        installGGScripts(cwd)
 
-      installGGScripts()
-
-      console.log()
-      console.log(`> cd ${projectName}`)
-      console.log('> npm start')
+        console.log()
+        console.log(`> cd ${projectName}`)
+        console.log('> npm start')
+      })
     } catch (err) {
       console.error('', err)
     }
@@ -237,26 +213,51 @@ const newProject = (projectName, programName) => {
   }
 }
 
-const init = () => {
+const middleware = async next => {
   const pkgJSON = isFileAvailable('package.json')
-  if (pkgJSON) {
-    const pkg = JSON.parse(pkgJSON)
-    addAllFiles(pkg, '', '.', true).then(() => installGGScripts)
-  } else {
+  const pkg = parseJSON(pkgJSON)
+  if (!pkg) {
     console.log('no node project detected here 🤔')
+    return
   }
+  await next(pkg)
+  console.log()
+  console.log(' ✨ done')
 }
 
-const updateDependencies = () => {
-  const pkgJSON = isFileAvailable('package.json')
-  if (pkgJSON) {
-    const pkg = JSON.parse(pkgJSON)
-    delete pkg.devDependencies['gg-scripts']
-    fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2))
-    installGGScripts()
-  } else {
-    console.log('no node project detected here 🤔')
+const init = async pkg => {
+  createDir(`./src`)
+  createDir(`./src/__tests__`)
+  await addAllFiles(pkg, '', '.', true)
+  installGGScripts()
+}
+
+const updateDependencies = async pkg => {
+  delete pkg.devDependencies['gg-scripts']
+  fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2))
+  installGGScripts()
+}
+
+const setupDocker = async pkg => {
+  createDir('docker')
+  await addTemplateFile('dockerignore', { hidden: true })
+  await addTemplateFile('Dockerfile', { outputName: 'docker/Dockerfile' })
+  await addTemplateFile('docker-compose.yml', {
+    outputName: 'docker/docker-compose.yml'
+  })
+}
+
+const setupDeploy = async pkg => {
+  createDir('deploy')
+  const { registry } = await enquirer.ask([questions.dockerRegistry])
+  const tokens = {
+    projectName: pkg.name,
+    registry
   }
+  await addTemplateFile('deploy.yml', {
+    outputName: 'deploy/deploy.yml',
+    tokens
+  })
 }
 
 const cli = () => {
@@ -272,16 +273,28 @@ const cli = () => {
       break
     }
     case 'pre-commit': {
-      addTemplateFile('pre-commit', { outputName: '.git/hooks/pre-commit' })
-      spawnSync('chmod', ['+x', '.git/hooks/pre-commit'])
+      addTemplateFile('pre-commit', {
+        outputName: '.git/hooks/pre-commit'
+      }).then(() => {
+        spawnSync('chmod', ['+x', '.git/hooks/pre-commit'])
+        console.log(' ✨ done')
+      })
       break
     }
     case 'update': {
-      updateDependencies()
+      middleware(updateDependencies)
+      break
+    }
+    case 'deploy': {
+      middleware(setupDeploy)
+      break
+    }
+    case 'docker': {
+      middleware(setupDocker)
       break
     }
     case 'init': {
-      init()
+      middleware(init)
       break
     }
     case '-h':
@@ -294,5 +307,4 @@ const cli = () => {
   }
 }
 
-cli()
-checkIfUpdateAvailable()
+module.exports = cli

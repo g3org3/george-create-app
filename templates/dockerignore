@@ -1,0 +1,8 @@
+node_modules
+.git
+test
+*.md
+*.log
+deploy
+package-scripts.js
+*.py
