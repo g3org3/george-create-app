@@ -17,9 +17,9 @@ const enquirer = new Enquirer()
 enquirer.register('expand', require('prompt-expand'))
 enquirer.register('input', require('prompt-input'))
 
-const addScripts = (pkg, cwd = '.') => {
+const addScripts = (pkg, cwd = '.', custom = false) => {
   const pkgPath = `${cwd}/package.json`
-  const scripts = {
+  const scripts = custom || {
     test: 'gg-scripts test',
     start: 'node src/index.js',
     'test:w': 'gg-scripts test:w',
@@ -95,6 +95,48 @@ const addTemplateFile = async (name, options = {}) => {
   return outputName
 }
 
+const addComponentFiles = async (
+  pkg,
+  projectName,
+  cwd,
+  editCurrentProject = false
+) => {
+  const tokens = {
+    projectName,
+    year: `${new Date().getFullYear()}`,
+    author: pkg.author || '',
+    fullDate: getFullDate()
+  }
+  // set pkg defaults
+  // update license type
+  pkg.license = 'MIT'
+  pkg.version = '0.0.1'
+  pkg.main = 'src/index.js'
+
+  addScripts(pkg, cwd, {
+    build: 'rollup -c'
+  })
+  await addTemplateFile('editorconfig', { cwd, hidden: true })
+  await addTemplateFile('gitignore', { cwd, hidden: true })
+  await addTemplateFile('npmignore', { cwd, hidden: true })
+  await addTemplateFile('LICENSE', { cwd, tokens })
+  await addTemplateFile('CHANGELOG.md', { cwd, tokens })
+  await addTemplateFile('component/babelrc', { cwd, outputName: '.babelrc' })
+  await addTemplateFile('component/rollup.config.js', {
+    cwd,
+    outputName: 'rollup.config.js'
+  })
+  await addTemplateFile('component/index.js', {
+    cwd,
+    outputName: 'src/index.js'
+  })
+  await addTemplateFile('README.basic.md', {
+    cwd,
+    tokens,
+    outputName: 'README.md'
+  })
+}
+
 const addAllFiles = async (
   pkg,
   projectName,
@@ -118,7 +160,7 @@ const addAllFiles = async (
     tokens.projectName = pkg.name
   }
 
-  addScripts(pkg, cwd, true)
+  addScripts(pkg, cwd)
   await addTemplateFile('editorconfig', { cwd, hidden: true })
   await addTemplateFile('gitignore', { cwd, hidden: true })
   await addTemplateFile('npmignore', { cwd, hidden: true })
@@ -159,7 +201,17 @@ const installGGScripts = cwd => {
   })
 }
 
-const newProject = async (projectName, programName) => {
+const installDeps = ({ cwd, dev, deps }) => {
+  console.log(' 📦 installing dependencies')
+  const args = ['add']
+  if (dev) args.push('--dev')
+  spawnSync('yarn', [...args, ...deps], {
+    stdio: 'inherit',
+    cwd
+  })
+}
+
+const newProject = async (projectName, programName, args) => {
   const result = spawnSync('ls', [projectName])
   const notFound = result.stderr.toString()
   if (projectName && notFound) {
@@ -173,18 +225,39 @@ const newProject = async (projectName, programName) => {
     createDir(projectName)
     createDir(`${projectName}/src`)
     createDir(`${projectName}/src/__tests__`)
-
     console.log(' 📝 package.json')
     spawnSync('npm', ['init', '-y'], { cwd })
 
-    const pkgJSON = isFileAvailable('package.json', relativePath)
-    const pkg = parseJSON(pkgJSON)
-    await addAllFiles(pkg, projectName, relativePath)
+    if (args && args[0] === '--component') {
+      const pkgJSON = isFileAvailable('package.json', relativePath)
+      const pkg = parseJSON(pkgJSON)
+      await addComponentFiles(pkg, projectName, relativePath)
+      installDeps({
+        dev: true,
+        cwd,
+        deps: [
+          'babel-plugin-external-helpers',
+          'babel-preset-env',
+          'babel-preset-react',
+          'rollup',
+          'rollup-plugin-babel',
+          'rollup-plugin-babel-minify',
+          'rollup-plugin-commonjs',
+          'rollup-plugin-node-resolve'
+        ]
+      })
+      installDeps({
+        cwd,
+        deps: ['react', 'react-proptypes']
+      })
+    } else {
+      const pkgJSON = isFileAvailable('package.json', relativePath)
+      const pkg = parseJSON(pkgJSON)
+      await addAllFiles(pkg, projectName, relativePath)
+      installGGScripts(cwd)
+    }
     console.log(' ⛏ git init')
     spawnSync('git', ['init'], { cwd })
-
-    installGGScripts(cwd)
-
     console.log()
     console.log(`> cd ${projectName}`)
     console.log('> npm start')
@@ -298,10 +371,11 @@ const cli = async () => {
       break
     }
     default: {
-      if (isFileAvailable('package.json')) { // check if the project has gg-scripts installed
-        spawnSync('./node_modules/.bin/gg-scripts', args, { stdio: 'inherit' })
+      if (isFileAvailable('package.json')) {
+        // check if the project has gg-scripts installed
+        spawnSync('npm', ['run', ...args], { stdio: 'inherit' })
       } else {
-        await newProject(cmd, programName)
+        await newProject(cmd, programName, args.slice(1))
       }
     }
   }
