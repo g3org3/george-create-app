@@ -298,7 +298,11 @@ const cli = async () => {
       break
     }
     default: {
-      await newProject(cmd, programName)
+      if (isFileAvailable('package.json')) { // check if the project has gg-scripts installed
+        spawnSync('./node_modules/.bin/gg-scripts', args, { stdio: 'inherit' })
+      } else {
+        await newProject(cmd, programName)
+      }
     }
   }
 }
