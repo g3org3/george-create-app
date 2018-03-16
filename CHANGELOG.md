@@ -10,6 +10,11 @@
 * example
 -->
 ## Next
+
+## 0.6.5 (2018-02-25)
+* add support for a react component project use flag --component
+* use this to run your npm scripts or gg-scripts
+
 ## 0.6.0 (2018-02-25)
 #### Enhancement
 * add docker support
