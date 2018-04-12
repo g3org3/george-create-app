@@ -1,9 +1,5 @@
 {
   "extends": ["plugin:prettier/recommended"],
-  "env": {
-    "node": true,
-    "jest": true
-  },
   "rules": {
     "prettier/prettier": [
       "error",
@@ -14,4 +10,3 @@
     ]
   }
 }
-

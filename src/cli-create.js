@@ -296,10 +296,17 @@ const updateDependencies = async pkg => {
   installGGScripts()
 }
 
+const setupEslint = async pkg => {
+  console.log(' 📦 eslint')
+  await addTemplateFile('eslintrc', { hidden: true })
+  const deps = ['eslint']
+  installDeps({ dev: true, deps })
+}
 const setupEslintPrettierReact = async pkg => {
   console.log(' 📦 eslint prettier husky ... for react')
   await addTemplateFile('eslintrc', { hidden: true })
   const deps = [
+    'eslint',
     'eslint-config-prettier',
     'eslint-plugin-prettier',
     'prettier',
@@ -386,6 +393,10 @@ const cli = async () => {
     }
     case 'docker': {
       await middleware(setupDocker)
+      break
+    }
+    case 'eslint-file': {
+      await middleware(setupEslint)
       break
     }
     case 'eslint-prettier-react': {
