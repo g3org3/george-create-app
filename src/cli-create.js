@@ -195,13 +195,13 @@ Examples:
 
 const installGGScripts = cwd => {
   console.log(' 📦 gg-scripts')
-  spawnSync('npm', ['i', '--save-dev', 'gg-scripts'], {
+  spawnSync('yarn', ['add', '--dev', 'gg-scripts'], {
     stdio: 'inherit',
     cwd
   })
 }
 
-const installDeps = ({ cwd, dev, deps }) => {
+const installDeps = ({ cwd = '.', dev, deps }) => {
   console.log(' 📦 installing dependencies')
   const args = ['add']
   if (dev) args.push('--dev')
@@ -296,6 +296,37 @@ const updateDependencies = async pkg => {
   installGGScripts()
 }
 
+const setupEslintPrettierReact = async pkg => {
+  console.log(' 📦 eslint prettier husky ... for react')
+  await addTemplateFile('eslintrc', { hidden: true })
+  const deps = [
+    'eslint-config-prettier',
+    'eslint-plugin-prettier',
+    'prettier',
+    'pretty-quick'
+  ]
+  installDeps({ dev: true, deps })
+}
+const setupEsLintPrettier = async pkg => {
+  console.log(' 📦 eslint prettier husky ...')
+  await addTemplateFile('eslintrc', { hidden: true })
+  const deps = [
+    'babel-eslint',
+    'eslint',
+    'eslint-config-prettier',
+    'eslint-config-react-app',
+    'eslint-plugin-flowtype',
+    'eslint-plugin-import',
+    'eslint-plugin-jsx-a11y',
+    'eslint-plugin-prettier',
+    'eslint-plugin-react',
+    'pretty-quick',
+    'prettier',
+    'husky'
+  ]
+  installDeps({ dev: true, deps })
+}
+
 const setupDocker = async pkg => {
   createDir('docker')
   await addTemplateFile('dockerignore', { hidden: true })
@@ -337,11 +368,7 @@ const cli = async () => {
       break
     }
     case 'pre-commit': {
-      await addTemplateFile('pre-commit', {
-        outputName: '.git/hooks/pre-commit'
-      })
-      spawnSync('chmod', ['+x', '.git/hooks/pre-commit'])
-      console.log(' ✨ done')
+      console.log('run gg eslint-prettier')
       break
     }
     case 'run': {
@@ -359,6 +386,14 @@ const cli = async () => {
     }
     case 'docker': {
       await middleware(setupDocker)
+      break
+    }
+    case 'eslint-prettier-react': {
+      await middleware(setupEslintPrettierReact)
+      break
+    }
+    case 'eslint-prettier': {
+      await middleware(setupEsLintPrettier)
       break
     }
     case 'init': {
